@@ -6,13 +6,16 @@ endif()
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-project ("bubbleAnimation")
+project ("animation")
 
 find_package(Vulkan REQUIRED)
 find_package(glfw3 3.3 REQUIRED)
-find_package(fmt REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(WAYLAND REQUIRED wayland-client)
 
-link_libraries(Vulkan::Vulkan glfw fmt::fmt)
+include_directories(${WAYLAND_INCLUDE_DIRS})
+
+link_libraries(Vulkan::Vulkan glfw ${WAYLAND_LIBRARIES})
 file(GLOB_RECURSE SOURCES ${PROJECT_SOURCE_DIR}/src/*.cpp)
 if (CMAKE_BUILD_TYPE STREQUAL "Release")
     set(FLAGS WIN32)
@@ -20,7 +23,7 @@ else()
     set(FLAGS)
 endif()
 
-add_executable (bubbleAnim ${FLAGS} ${SOURCES})
+add_executable (animation ${FLAGS} ${SOURCES})
 
 find_program(GLSL_VALIDATOR glslangValidator HINTS 
   ${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE} 

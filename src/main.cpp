@@ -1,9 +1,8 @@
-#include <concepts>
-#include <cstddef>
-#include <ostream>
-#include <vulkan/vulkan_core.h>
+#include <wayland-client-protocol.h>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
+#define GLFW_EXPOSE_NATIVE_WAYLAND
+#include <GLFW/glfw3native.h>
 
 #include <glm/glm.hpp>
 
@@ -106,6 +105,20 @@ const std::vector<Vertex> vertices = {
 
 const std::vector<uint16_t> indices = {0, 1, 2, 2, 3, 0};
 
+wl_compositor *wlCompositor;
+static void registryHandle(void *userData, struct wl_registry *registry,
+                           uint32_t name, const char *interface,
+                           uint32_t version) {
+  if (strcmp(interface, "wl_compositor") == 0) {
+    wlCompositor = reinterpret_cast<wl_compositor *>(
+        wl_registry_bind(registry, name, &wl_compositor_interface, version));
+  }
+}
+static void registryHandleRemove(void *userData, struct wl_registry *registry,
+                                 uint32_t name) {}
+static const struct wl_registry_listener registryListener = {
+    registryHandle, registryHandleRemove};
+
 class App {
 public:
   void run() {
@@ -158,13 +171,32 @@ private:
   void initWindow() {
     glfwInit();
 
+    int major, minor, rev;
+    glfwGetVersion(&major, &minor, &rev);
+    std::cout << major << "." << minor << "." << rev << std::endl;
+
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    glfwWindowHint(GLFW_MOUSE_PASSTHROUGH, GLFW_TRUE);
-    glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
 
     const GLFWvidmode *mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-    window = glfwCreateWindow(mode->width/1.5, mode->height/1.5,
-                              "animation", nullptr, nullptr);
+    // glfwGetMonitorContentScale(GLFWmonitor *monitor, float *xscale, float *yscale) returns 2.0 whereas my scale is 1.5 in my cfg, so for now i divide it with a hardcoded value
+    window = glfwCreateWindow(mode->width / 1.5, mode->height / 1.5 ,"animation", nullptr, nullptr);
+    glfwSetWindowAttrib(window, GLFW_MOUSE_PASSTHROUGH, GLFW_TRUE);
+
+    int w, h;
+    glfwGetWindowSize(window, &w, &h);
+
+    wl_display *wlDisplay = glfwGetWaylandDisplay();
+    wl_surface *wlSurface = glfwGetWaylandWindow(window);
+    wl_registry_add_listener(wl_display_get_registry(wlDisplay),
+                             &registryListener, NULL);
+    wl_display_roundtrip(wlDisplay);
+
+    // region is empty by default
+    wl_region *wlRegion = wl_compositor_create_region(wlCompositor);
+    wl_surface_set_input_region(wlSurface, wlRegion);
+    wl_surface_commit(wlSurface);
+    wl_region_destroy(wlRegion);
+
     glfwSetWindowUserPointer(window, this);
     glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
   }
