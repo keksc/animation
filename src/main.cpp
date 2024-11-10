@@ -171,10 +171,6 @@ private:
   void initWindow() {
     glfwInit();
 
-    int major, minor, rev;
-    glfwGetVersion(&major, &minor, &rev);
-    std::cout << major << "." << minor << "." << rev << std::endl;
-
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
     const GLFWvidmode *mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
